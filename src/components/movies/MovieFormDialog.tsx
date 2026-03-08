@@ -60,7 +60,7 @@ export default function MovieFormDialog({
         );
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (!title.trim()) return;
 
@@ -140,8 +140,8 @@ export default function MovieFormDialog({
                                     type="button"
                                     onClick={() => toggleGenre(genre.id)}
                                     className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${selectedGenres.includes(genre.id)
-                                            ? "bg-amber-500 text-black"
-                                            : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                                        ? "bg-amber-500 text-black"
+                                        : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
                                         }`}
                                 >
                                     {genre.name}

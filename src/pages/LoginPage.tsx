@@ -17,7 +17,7 @@ export default function LoginPage() {
     const isPasswordValid = password === "" || password.length >= 8;
     const isFormValid = email.trim() !== "" && password !== "" && isEmailValid && isPasswordValid;
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (!isFormValid) return;
         setIsLoading(true);

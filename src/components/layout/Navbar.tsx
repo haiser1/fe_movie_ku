@@ -23,7 +23,7 @@ export default function Navbar() {
 
     const isActive = (path: string) => location.pathname === path;
 
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = (e: React.SyntheticEvent) => {
         e.preventDefault();
         if (searchQuery.trim()) {
             navigate(`/movies?search=${encodeURIComponent(searchQuery.trim())}`);

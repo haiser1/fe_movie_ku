@@ -15,14 +15,14 @@ const api = axios.create({
 export function parseApiError(err: any, fallback: string = "An error occurred"): string {
     const data = err.response?.data;
     if (!data) return fallback;
-    
+
     if (data.error !== undefined && data.error !== null) {
         // If it is a generic validation error, parse the specific list of dicts
         if (data.message === "Validation Error" && Array.isArray(data.error)) {
             // e.g. [{ field: "email", msg: "Invalid email format", type: "value_error" }, ...]
             return data.error.map((e: any) => `${e.field}: ${e.msg}`).join("\n");
         }
-        
+
         // If it is just a string
         if (typeof data.error === 'string') {
             return data.error;
@@ -43,7 +43,7 @@ export function parseApiError(err: any, fallback: string = "An error occurred"):
         // Fallback for numbers, booleans, etc.
         return String(data.error);
     }
-    
+
     return data.message || fallback;
 }
 

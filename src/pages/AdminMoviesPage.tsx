@@ -39,7 +39,7 @@ function MovieDialog({ initial, onClose, onSubmit, isSaving }: MovieFormProps) {
     const set = (field: string, value: unknown) =>
         setForm((f) => ({ ...f, [field]: value }));
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SyntheticEvent) => {
         e.preventDefault();
         onSubmit(form);
     };
@@ -248,8 +248,8 @@ export default function AdminMoviesPage() {
                                     </td>
                                     <td className="px-4 py-3 hidden sm:table-cell">
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${m.source === "tmdb" ? "bg-amber-500/15 text-amber-400" :
-                                                m.source === "user" ? "bg-blue-500/15 text-blue-400" :
-                                                    "bg-purple-500/15 text-purple-400"}`}>
+                                            m.source === "user" ? "bg-blue-500/15 text-blue-400" :
+                                                "bg-purple-500/15 text-purple-400"}`}>
                                             {m.source}
                                         </span>
                                     </td>
