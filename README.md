@@ -47,7 +47,7 @@ MovieKu is a modern, responsive web application built to browse, manage, and dis
 
 1. **Clone the repository** (if applicable) or navigate to the project directory:
    ```bash
-   git clone https://github.com/haiser1/fe_movie_ku.gi
+   git clone https://github.com/haiser1/fe_movie_ku.git
    cd fe-movie-ku
    ```
 
