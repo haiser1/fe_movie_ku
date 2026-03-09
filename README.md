@@ -29,9 +29,13 @@ MovieKu is a modern, responsive web application built to browse, manage, and dis
 
 ### Admin Features
 - **Analytics Dashboard**: Visual data representation of metrics like movies per day, user signups, wishlist activities (Column Charts) and movie distribution by genre (Pie Chart). Includes date range filtering.
-- **User Management**: Add new users/admins, edit details, and soft-delete/reactivate user accounts.
-- **Movie Management**: Full CRUD operations for the platform's global movie database.
-- **TMDB Synchronization**: Pull popular movie data from The Movie Database (TMDB) with options to sync full or partial data, limit page numbers, and gracefully stop ongoing syncs.
+- **User Management**: Add new users/admins, edit details, and soft-delete/reactivate user accounts. Includes clickable table headers for instant **sorting** by name or join date.
+- **Movie Management**: Full CRUD operations for the platform's global movie database, soft-delete archiving, movie reactivation, and robust clickable table-header **sorting** (by title, source, rating, and creation date).
+- **TMDB Synchronization**: Pull popular movie data from The Movie Database (TMDB) with robust, paginated automation. Features include:
+  - **Sync Modes**: Choose between *Full Sync* (all popular movies) or *Changes Sync* (last 14 days of updates).
+  - **Max Pages Control**: Limit the sync cycle to avoid backend/API timeouts.
+  - **Resumable Syncs**: Smartly resume sync operations that were previously `stopped`, `failed`, or `in_progress`.
+  - **Graceful Stop**: Interrupt ongoing batch syncs seamlessly.
 
 ## 🛠️ Getting Started
 
