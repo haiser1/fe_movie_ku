@@ -3,7 +3,7 @@ import { useAdminUserStore } from "@/stores/adminUserStore";
 import type { AdminUserResponse, AdminCreateUserRequest, AdminUpdateUserRequest } from "@/types";
 import {
     Users, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight,
-    Loader2, X, CheckCircle2, XCircle, ShieldCheck, RefreshCcw
+    Loader2, X, CheckCircle2, XCircle, ShieldCheck, RefreshCcw, ChevronUp, ChevronDown, ArrowUpDown
 } from "lucide-react";
 
 // ─── Toast ──────────────────────────────────────────────────────────────
@@ -103,6 +103,8 @@ export default function AdminUsersPage() {
     const [search, setSearch] = useState("");
     const [role, setRole] = useState<"" | "user" | "admin">("");
     const [statusFilter, setStatusFilter] = useState<"" | "active" | "inactive">("");
+    const [sortBy, setSortBy] = useState<"name" | "email" | "created_at">("created_at");
+    const [orderBy, setOrderBy] = useState<"asc" | "desc">("desc");
     const [page, setPage] = useState(1);
     const PER_PAGE = 20;
 
@@ -115,9 +117,18 @@ export default function AdminUsersPage() {
 
     const showToast = (msg: string, ok: boolean) => setToast({ msg, ok });
 
-    const load = (p = page) => fetchUsers({ search, role: role || undefined, status: statusFilter || undefined, page: p, per_page: PER_PAGE });
+    const load = (p = page) => fetchUsers({ search, role: role || undefined, status: statusFilter || undefined, sort_by: sortBy, order_by: orderBy, page: p, per_page: PER_PAGE });
 
-    useEffect(() => { load(1); setPage(1); }, [search, role, statusFilter]);
+    useEffect(() => { load(1); setPage(1); }, [search, role, statusFilter, sortBy, orderBy]);
+
+    const handleSort = (field: "name" | "email" | "created_at") => {
+        if (sortBy === field) {
+            setOrderBy(orderBy === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(field);
+            setOrderBy("asc");
+        }
+    };
 
     const handleSave = async (data: AdminCreateUserRequest | AdminUpdateUserRequest) => {
         setIsSaving(true);
@@ -149,7 +160,7 @@ export default function AdminUsersPage() {
 
     const openCreate = () => { setEditing(null); setDialogOpen(true); };
     const openEdit = (u: AdminUserResponse) => { setEditing(u); setDialogOpen(true); };
-    const changePage = (p: number) => { setPage(p); fetchUsers({ search, role: role || undefined, status: statusFilter || undefined, page: p, per_page: PER_PAGE }); };
+    const changePage = (p: number) => { setPage(p); fetchUsers({ search, role: role || undefined, status: statusFilter || undefined, sort_by: sortBy, order_by: orderBy, page: p, per_page: PER_PAGE }); };
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -204,11 +215,15 @@ export default function AdminUsersPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-white/5 text-xs font-medium uppercase tracking-wider text-white/30">
-                                <th className="px-4 py-3 text-left">User</th>
+                                <th className="px-4 py-3 text-left cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("name")}>
+                                    <div className="flex items-center gap-1">User {sortBy === "name" ? (orderBy === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
                                 <th className="px-4 py-3 text-left hidden sm:table-cell">Role</th>
                                 <th className="px-4 py-3 text-left hidden md:table-cell">Provider</th>
                                 <th className="px-4 py-3 text-left hidden lg:table-cell">Status</th>
-                                <th className="px-4 py-3 text-left hidden xl:table-cell">Joined</th>
+                                <th className="px-4 py-3 text-left hidden xl:table-cell cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("created_at")}>
+                                    <div className="flex items-center gap-1">Joined {sortBy === "created_at" ? (orderBy === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
                                 <th className="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -251,21 +266,21 @@ export default function AdminUsersPage() {
                                         {new Date(u.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-1">
                                             {u.deleted_at ? (
                                                 <button onClick={() => setConfirmReactivate(u)}
-                                                    className="rounded-lg p-1.5 text-white/40 hover:bg-emerald-500/10 hover:text-emerald-400" title="Reactivate user">
+                                                    className="rounded-lg p-1.5 text-white/40 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors" title="Reactivate user">
                                                     <RefreshCcw className="h-4 w-4" />
                                                 </button>
                                             ) : (
                                                 <>
                                                     <button onClick={() => openEdit(u)}
-                                                        className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white" title="Edit user">
+                                                        className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition-colors" title="Edit user">
                                                         <Pencil className="h-4 w-4" />
                                                     </button>
                                                     {u.role !== "admin" && (
                                                         <button onClick={() => setConfirmDelete(u)}
-                                                            className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400" title="Delete user">
+                                                            className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors" title="Delete user">
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     )}

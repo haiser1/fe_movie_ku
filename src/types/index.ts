@@ -214,14 +214,13 @@ export interface AdminMovieUpdateRequest {
 // Sync
 export interface SyncLog {
     id: string;
-    is_running?: boolean;
+    sync_type: "full" | "changes";
     last_sync_at: string;
     last_synced_endpoint?: string | null;
     last_synced_page?: number | null;
     total_inserted: number;
     total_updated: number;
-    status: "success" | "failed" | "running" | "stopped";
-    stop_requested?: boolean;
+    status: "success" | "failed" | "in_progress" | "stopped";
     error_message?: string | null;
     created_at: string;
 }

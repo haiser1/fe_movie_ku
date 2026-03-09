@@ -3,7 +3,7 @@ import { useAdminMovieStore } from "@/stores/adminMovieStore";
 import type { Movie, AdminMovieCreateRequest, AdminMovieUpdateRequest } from "@/types";
 import {
     Film, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight,
-    Loader2, X, CheckCircle2, XCircle, Star,
+    Loader2, X, CheckCircle2, XCircle, Star, ChevronUp, ChevronDown, ArrowUpDown
 } from "lucide-react";
 
 // ─── Toast ──────────────────────────────────────────────────────────────
@@ -124,6 +124,8 @@ export default function AdminMoviesPage() {
     const [search, setSearch] = useState("");
     const [source, setSource] = useState<"" | "tmdb" | "user" | "admin">("");
     const [status, setStatus] = useState<"" | "active" | "archived">("");
+    const [sort, setSort] = useState<string>("created_at");
+    const [order, setOrder] = useState<"asc" | "desc">("desc");
     const [page, setPage] = useState(1);
     const PER_PAGE = 20;
 
@@ -135,9 +137,18 @@ export default function AdminMoviesPage() {
 
     const showToast = (msg: string, ok: boolean) => setToast({ msg, ok });
 
-    const load = (p = page) => fetchMovies({ search, source, status, page: p, per_page: PER_PAGE });
+    const load = (p = page) => fetchMovies({ search, source, status, sort, order, page: p, per_page: PER_PAGE });
 
-    useEffect(() => { load(1); setPage(1); }, [search, source, status]);
+    useEffect(() => { load(1); setPage(1); }, [search, source, status, sort, order]);
+
+    const handleSort = (field: string) => {
+        if (sort === field) {
+            setOrder(order === "asc" ? "desc" : "asc");
+        } else {
+            setSort(field);
+            setOrder("asc");
+        }
+    };
 
     const handleSave = async (data: AdminMovieCreateRequest | AdminMovieUpdateRequest) => {
         setIsSaving(true);
@@ -164,7 +175,7 @@ export default function AdminMoviesPage() {
     const openCreate = () => { setEditing(null); setDialogOpen(true); };
     const openEdit = (m: Movie) => { setEditing(m); setDialogOpen(true); };
 
-    const changePage = (p: number) => { setPage(p); fetchMovies({ search, source, status, page: p, per_page: PER_PAGE }); };
+    const changePage = (p: number) => { setPage(p); fetchMovies({ search, source, status, sort, order, page: p, per_page: PER_PAGE }); };
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -220,11 +231,19 @@ export default function AdminMoviesPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-white/5 text-xs font-medium uppercase tracking-wider text-white/30">
-                                <th className="px-4 py-3 text-left">Title</th>
-                                <th className="px-4 py-3 text-left hidden sm:table-cell">Source</th>
+                                <th className="px-4 py-3 text-left cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("title")}>
+                                    <div className="flex items-center gap-1">Title {sort === "title" ? (order === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
+                                <th className="px-4 py-3 text-left hidden sm:table-cell cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("source")}>
+                                    <div className="flex items-center gap-1">Source {sort === "source" ? (order === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
                                 <th className="px-4 py-3 text-left hidden md:table-cell">Status</th>
-                                <th className="px-4 py-3 text-left hidden lg:table-cell">Rating</th>
-                                <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
+                                <th className="px-4 py-3 text-left hidden lg:table-cell cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("rating")}>
+                                    <div className="flex items-center gap-1">Rating {sort === "rating" ? (order === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
+                                <th className="px-4 py-3 text-left hidden xl:table-cell cursor-pointer hover:text-white transition-colors group/th" onClick={() => handleSort("created_at")}>
+                                    <div className="flex items-center gap-1">Created {sort === "created_at" ? (order === "asc" ? <ChevronUp className="h-4 w-4 text-amber-500" /> : <ChevronDown className="h-4 w-4 text-amber-500" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}</div>
+                                </th>
                                 <th className="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -270,13 +289,13 @@ export default function AdminMoviesPage() {
                                         {new Date(m.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-1">
                                             <button onClick={() => openEdit(m)}
-                                                className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white">
+                                                className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition-colors">
                                                 <Pencil className="h-4 w-4" />
                                             </button>
                                             <button onClick={() => setConfirmDelete(m)}
-                                                className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400">
+                                                className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors">
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
                                         </div>
