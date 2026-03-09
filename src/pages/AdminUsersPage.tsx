@@ -150,12 +150,14 @@ export default function AdminUsersPage() {
         const result = await deleteUser(user.id);
         if (result.success) setConfirmDelete(null);
         showToast(result.message, result.success);
+        load();
     };
 
     const handleReactivate = async (user: AdminUserResponse) => {
         const result = await reactivateUser(user.id);
         if (result.success) setConfirmReactivate(null);
         showToast(result.message, result.success);
+        load();
     };
 
     const openCreate = () => { setEditing(null); setDialogOpen(true); };

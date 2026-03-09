@@ -27,6 +27,7 @@ interface AdminMovieState {
     createMovie: (data: AdminMovieCreateRequest) => Promise<{ success: boolean; message: string }>;
     updateMovie: (id: string, data: AdminMovieUpdateRequest) => Promise<{ success: boolean; message: string }>;
     deleteMovie: (id: string) => Promise<{ success: boolean; message: string }>;
+    reactivateMovie: (id: string) => Promise<{ success: boolean; message: string }>;
 }
 
 export const useAdminMovieStore = create<AdminMovieState>((set) => ({
@@ -92,13 +93,27 @@ export const useAdminMovieStore = create<AdminMovieState>((set) => ({
     deleteMovie: async (id) => {
         try {
             const { data } = await api.delete(`/api/admin/movies/${id}`);
+            // Soft delete: update status to archived locally
             set((state) => ({
-                movies: state.movies.filter((m) => m.id !== id),
+                movies: state.movies.map((m) => (m.id === id ? { ...m, status: "archived" } : m)),
             }));
             return { success: true, message: data.message || "Movie deleted successfully" };
         } catch (err: any) {
             console.error("Failed to delete movie:", err);
             return { success: false, message: parseApiError(err, "Failed to delete movie") };
+        }
+    },
+
+    reactivateMovie: async (id) => {
+        try {
+            const { data } = await api.patch<ApiResponse<Movie>>(`/api/admin/movies/${id}/reactivate`);
+            set((state) => ({
+                movies: state.movies.map((m) => (m.id === id ? data.data : m)),
+            }));
+            return { success: true, message: data.message || "Movie reactivated successfully" };
+        } catch (err: any) {
+            console.error("Failed to reactivate movie:", err);
+            return { success: false, message: parseApiError(err, "Failed to reactivate movie") };
         }
     },
 }));

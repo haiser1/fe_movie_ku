@@ -3,7 +3,7 @@ import { useAdminMovieStore } from "@/stores/adminMovieStore";
 import type { Movie, AdminMovieCreateRequest, AdminMovieUpdateRequest } from "@/types";
 import {
     Film, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight,
-    Loader2, X, CheckCircle2, XCircle, Star, ChevronUp, ChevronDown, ArrowUpDown
+    Loader2, X, CheckCircle2, XCircle, Star, ChevronUp, ChevronDown, ArrowUpDown, RefreshCcw
 } from "lucide-react";
 
 // ─── Toast ──────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ function MovieDialog({ initial, onClose, onSubmit, isSaving }: MovieFormProps) {
 
 // ─── Page ──────────────────────────────────────────────────────────────
 export default function AdminMoviesPage() {
-    const { movies, pagination, isLoading, fetchMovies, createMovie, updateMovie, deleteMovie } = useAdminMovieStore();
+    const { movies, pagination, isLoading, fetchMovies, createMovie, updateMovie, deleteMovie, reactivateMovie } = useAdminMovieStore();
 
     const [search, setSearch] = useState("");
     const [source, setSource] = useState<"" | "tmdb" | "user" | "admin">("");
@@ -133,6 +133,7 @@ export default function AdminMoviesPage() {
     const [editing, setEditing] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<Movie | null>(null);
+    const [confirmReactivate, setConfirmReactivate] = useState<Movie | null>(null);
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
     const showToast = (msg: string, ok: boolean) => setToast({ msg, ok });
@@ -170,6 +171,14 @@ export default function AdminMoviesPage() {
         const result = await deleteMovie(movie.id);
         if (result.success) setConfirmDelete(null);
         showToast(result.message, result.success);
+        load();
+    };
+
+    const handleReactivate = async (movie: Movie) => {
+        const result = await reactivateMovie(movie.id);
+        if (result.success) setConfirmReactivate(null);
+        showToast(result.message, result.success);
+        load();
     };
 
     const openCreate = () => { setEditing(null); setDialogOpen(true); };
@@ -290,14 +299,23 @@ export default function AdminMoviesPage() {
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center justify-end gap-1">
-                                            <button onClick={() => openEdit(m)}
-                                                className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition-colors">
-                                                <Pencil className="h-4 w-4" />
-                                            </button>
-                                            <button onClick={() => setConfirmDelete(m)}
-                                                className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors">
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            {m.status === "archived" ? (
+                                                <button onClick={() => setConfirmReactivate(m)}
+                                                    className="rounded-lg p-1.5 text-white/40 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors" title="Reactivate movie">
+                                                    <RefreshCcw className="h-4 w-4" />
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => openEdit(m)}
+                                                        className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition-colors">
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+                                                    <button onClick={() => setConfirmDelete(m)}
+                                                        className="rounded-lg p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -340,15 +358,33 @@ export default function AdminMoviesPage() {
             {confirmDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[oklch(0.14_0.02_260)] p-6 shadow-2xl">
-                        <h2 className="text-base font-semibold text-white">Delete Movie?</h2>
+                        <h2 className="text-base font-semibold text-white">Archive Movie?</h2>
                         <p className="mt-2 text-sm text-white/50">
-                            "{confirmDelete.title}" will be soft-deleted. This cannot be undone easily.
+                            "{confirmDelete.title}" will be archived. This will hide it from normal users.
                         </p>
                         <div className="mt-5 flex justify-end gap-3">
                             <button onClick={() => setConfirmDelete(null)}
                                 className="rounded-lg px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
                             <button onClick={() => handleDelete(confirmDelete)}
-                                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400">Delete</button>
+                                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400">Archive</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reactivate Confirm */}
+            {confirmReactivate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[oklch(0.14_0.02_260)] p-6 shadow-2xl">
+                        <h2 className="text-base font-semibold text-white">Reactivate Movie?</h2>
+                        <p className="mt-2 text-sm text-white/50">
+                            "{confirmReactivate.title}" will be restored to active status and visible to users.
+                        </p>
+                        <div className="mt-5 flex justify-end gap-3">
+                            <button onClick={() => setConfirmReactivate(null)}
+                                className="rounded-lg px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+                            <button onClick={() => handleReactivate(confirmReactivate)}
+                                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400">Reactivate</button>
                         </div>
                     </div>
                 </div>
