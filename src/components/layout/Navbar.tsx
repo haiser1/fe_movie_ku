@@ -50,6 +50,7 @@ export default function Navbar() {
     };
 
     const handleLogin = () => {
+        setMobileOpen(false);
         navigate("/login");
     };
 
