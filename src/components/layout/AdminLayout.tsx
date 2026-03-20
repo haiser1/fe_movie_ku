@@ -9,8 +9,10 @@ import {
     Menu,
     X,
     ChevronRight,
+    AlertTriangle,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useAdminSyncStore, getActiveSyncLogId } from "@/stores/adminSyncStore";
 
 const navItems = [
     {
@@ -40,8 +42,19 @@ export default function AdminLayout() {
     const [logoutConfirm, setLogoutConfirm] = useState(false);
     const navigate = useNavigate();
     const { user, logout } = useAuthStore();
+    const isSyncing = useAdminSyncStore((s) => s.isSyncing);
 
     const handleLogout = async () => {
+        // If a sync is running, stop it first
+        if (isSyncing || getActiveSyncLogId()) {
+            const state = useAdminSyncStore.getState();
+            state.stopSync();
+            const syncLogId = state.batchProgress?.sync_log_id || getActiveSyncLogId();
+            if (syncLogId) {
+                await state.stopSyncApi(syncLogId);
+            }
+            localStorage.removeItem("active_sync_session");
+        }
         await logout();
         setLogoutConfirm(false);
         navigate("/");
@@ -190,6 +203,14 @@ export default function AdminLayout() {
                         <p className="mt-2 text-center text-sm text-white/50">
                             Are you sure you want to sign out of your account?
                         </p>
+                        {(isSyncing || getActiveSyncLogId()) && (
+                            <div className="mt-4 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 flex items-start gap-2.5">
+                                <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
+                                <p className="text-xs text-orange-400">
+                                    A TMDB sync is currently in progress. Signing out will stop the sync process.
+                                </p>
+                            </div>
+                        )}
                         <div className="mt-5 flex gap-3">
                             <button
                                 onClick={() => setLogoutConfirm(false)}
@@ -201,7 +222,7 @@ export default function AdminLayout() {
                                 onClick={handleLogout}
                                 className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-400"
                             >
-                                Sign Out
+                                {(isSyncing || getActiveSyncLogId()) ? "Stop Sync & Sign Out" : "Sign Out"}
                             </button>
                         </div>
                     </div>

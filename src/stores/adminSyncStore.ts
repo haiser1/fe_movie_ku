@@ -2,6 +2,32 @@ import { create } from "zustand";
 import api, { parseApiError } from "@/lib/api";
 import type { SyncLog, ApiResponse } from "@/types";
 
+const SYNC_SESSION_KEY = "active_sync_session";
+
+export interface SyncSession {
+    sync_log_id: string;
+    sync_mode: "full" | "changes";
+    max_pages: number | "";
+}
+
+export function getActiveSyncSession(): SyncSession | null {
+    const raw = localStorage.getItem(SYNC_SESSION_KEY);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+}
+
+export function getActiveSyncLogId(): string | null {
+    return getActiveSyncSession()?.sync_log_id ?? null;
+}
+
+function setActiveSyncSession(session: SyncSession | null) {
+    if (session) {
+        localStorage.setItem(SYNC_SESSION_KEY, JSON.stringify(session));
+    } else {
+        localStorage.removeItem(SYNC_SESSION_KEY);
+    }
+}
+
 export interface SyncBatchResponse {
     status: "in_progress" | "completed" | "failed";
     endpoint: string | null;
@@ -90,18 +116,21 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
     runFullSync: async (maxPages, resume, showToast) => {
         const { lastSync, syncBatch } = get();
         set({ isSyncing: true, isStopped: false, batchProgress: null, syncLogs: [] });
+        // Will be set once we have the sync_log_id
 
         let currentEndpoint: string | null = null;
         let currentPage: number | null = null;
         let pageCount = 0;
         let currentSyncLogId: string | null = null;
         let isSyncingLoop = true;
+        let shouldClearSession = false;
         const maxPageLimit = maxPages === "" ? Infinity : maxPages;
 
         let isResuming = false;
         if (resume && lastSync && (lastSync.status === "failed" || lastSync.status === "in_progress")) {
             currentSyncLogId = lastSync.id;
             isResuming = true;
+            setActiveSyncSession({ sync_log_id: currentSyncLogId, sync_mode: "full", max_pages: maxPages });
             if (lastSync.last_synced_endpoint) {
                 currentEndpoint = lastSync.last_synced_endpoint;
                 currentPage = (lastSync.last_synced_page || 0) + 1;
@@ -122,6 +151,8 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 set((state) => ({ syncLogs: [...state.syncLogs, `✗ Error: ${initResult.message}`] }));
                 showToast(initResult.message, false);
                 set({ isSyncing: false });
+                shouldClearSession = true;
+                setActiveSyncSession(null);
                 return;
             }
 
@@ -130,6 +161,8 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 set((state) => ({ syncLogs: [...state.syncLogs, `🎉 Sync already completed!`] }));
                 showToast("Sync already completed!", true);
                 set({ isSyncing: false });
+                shouldClearSession = true;
+                setActiveSyncSession(null);
                 get().fetchLastSync();
                 return;
             }
@@ -137,6 +170,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
             currentEndpoint = d.next_endpoint;
             currentPage = d.next_page;
             currentSyncLogId = d.sync_log_id;
+            setActiveSyncSession({ sync_log_id: currentSyncLogId!, sync_mode: "full", max_pages: maxPages });
         }
 
         while (isSyncingLoop && pageCount < maxPageLimit) {
@@ -165,6 +199,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
             // Save the log ID if it's the first hit during resume
             if (!currentSyncLogId && d.sync_log_id) {
                 currentSyncLogId = d.sync_log_id;
+                setActiveSyncSession({ sync_log_id: currentSyncLogId, sync_mode: "full", max_pages: maxPages });
             }
 
             set((state) => ({
@@ -183,6 +218,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 }));
                 showToast("Sync completed successfully!", true);
                 isSyncingLoop = false;
+                shouldClearSession = true;
                 break;
             }
 
@@ -190,6 +226,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 set((state) => ({ syncLogs: [...state.syncLogs, `✗ Sync failed.`] }));
                 showToast("Sync failed", false);
                 isSyncingLoop = false;
+                shouldClearSession = true;
                 break;
             }
 
@@ -201,25 +238,36 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
         if (!get().isStopped && isSyncingLoop && pageCount >= maxPageLimit) {
             set((state) => ({ syncLogs: [...state.syncLogs, `⏸ Reached max pages limit (${maxPageLimit}).`] }));
             showToast(`Synced ${pageCount} pages (max limit reached).`, true);
+            shouldClearSession = true;
+        }
+
+        if (get().isStopped) {
+            shouldClearSession = true;
         }
 
         set({ isSyncing: false });
+        if (shouldClearSession) {
+            setActiveSyncSession(null);
+        }
         get().fetchLastSync();
     },
 
     runChangesSync: async (maxPages, resume, showToast) => {
         const { lastSync, syncBatch } = get();
         set({ isSyncing: true, isStopped: false, batchProgress: null, syncLogs: [] });
+        // Will be set once we have the sync_log_id
 
         let currentPage: number | null = null;
         let pageCount = 0;
         let currentSyncLogId: string | null = null;
         let isSyncingLoop = true;
+        let shouldClearSession = false;
         const maxPageLimit = maxPages === "" ? Infinity : maxPages;
 
         if (resume && lastSync && lastSync.sync_type === "changes" && (lastSync.status === "failed" || lastSync.status === "in_progress" || lastSync.status === "stopped")) {
             currentSyncLogId = lastSync.id;
             currentPage = (lastSync.last_synced_page || 0) + 1;
+            setActiveSyncSession({ sync_log_id: currentSyncLogId, sync_mode: "changes", max_pages: maxPages });
             set((state) => ({ syncLogs: [...state.syncLogs, "▸ Resuming changes sync..."] }));
         } else {
             set((state) => ({ syncLogs: [...state.syncLogs, "▸ Starting changes sync (last 14 days)..."] }));
@@ -250,6 +298,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
 
             if (!currentSyncLogId && d.sync_log_id) {
                 currentSyncLogId = d.sync_log_id;
+                setActiveSyncSession({ sync_log_id: currentSyncLogId, sync_mode: "changes", max_pages: maxPages });
             }
 
             set((state) => ({
@@ -268,6 +317,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 }));
                 showToast("Changes sync completed!", true);
                 isSyncingLoop = false;
+                shouldClearSession = true;
                 break;
             }
 
@@ -275,6 +325,7 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
                 set((state) => ({ syncLogs: [...state.syncLogs, `✗ Sync failed.`] }));
                 showToast("Sync failed", false);
                 isSyncingLoop = false;
+                shouldClearSession = true;
                 break;
             }
 
@@ -284,9 +335,17 @@ export const useAdminSyncStore = create<AdminSyncState>((set, get) => ({
         if (!get().isStopped && isSyncingLoop && pageCount >= maxPageLimit) {
             set((state) => ({ syncLogs: [...state.syncLogs, `⏸ Reached max pages limit (${maxPageLimit}).`] }));
             showToast(`Synced ${pageCount} pages (max limit reached).`, true);
+            shouldClearSession = true;
+        }
+
+        if (get().isStopped) {
+            shouldClearSession = true;
         }
 
         set({ isSyncing: false });
+        if (shouldClearSession) {
+            setActiveSyncSession(null);
+        }
         get().fetchLastSync();
     },
 }));

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { useAdminSyncStore, type SyncBatchResponse } from "@/stores/adminSyncStore";
+import { useEffect, useState, useRef } from "react";
+import { useAdminSyncStore, getActiveSyncLogId, getActiveSyncSession, type SyncBatchResponse } from "@/stores/adminSyncStore";
 import {
     RefreshCw, CheckCircle2, XCircle, Clock, Loader2,
-    Database, Play, Hash, Link, StopCircle,
+    Database, Play, Hash, Link, StopCircle, AlertTriangle,
 } from "lucide-react";
 import type { SyncLog } from "@/types";
 
@@ -165,6 +165,27 @@ export default function AdminSyncPage() {
         fetchLastSync();
     }, [fetchLastSync]);
 
+    // Auto-resume sync after hard refresh if our session matches
+    const autoResumeAttempted = useRef(false);
+    useEffect(() => {
+        if (autoResumeAttempted.current || isSyncing || !lastSync) return;
+        const session = getActiveSyncSession();
+        if (
+            session &&
+            lastSync.id === session.sync_log_id &&
+            lastSync.status === "in_progress"
+        ) {
+            autoResumeAttempted.current = true;
+            showToast("Resuming sync after page refresh...", true);
+            if (session.sync_mode === "full") {
+                runFullSync(session.max_pages, true, showToast);
+            } else {
+                runChangesSync(session.max_pages, true, showToast);
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lastSync]);
+
     const showToast = (msg: string, ok: boolean) => {
         setToast({ msg, ok });
         setTimeout(() => setToast(null), 4000);
@@ -196,6 +217,15 @@ export default function AdminSyncPage() {
     const handleRefresh = () => {
         fetchLastSync();
     };
+
+    // Determine if an in_progress sync belongs to another admin:
+    // If sessionStorage has a matching sync_log_id, it's OUR sync (just refreshed).
+    const isAnotherAdminSyncing =
+        lastSync?.status === "in_progress" &&
+        !isSyncing &&
+        getActiveSyncLogId() !== lastSync.id;
+
+
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -235,6 +265,19 @@ export default function AdminSyncPage() {
                     <Play className="h-4 w-4 text-amber-500" />
                     Trigger New Sync
                 </h2>
+
+                {isAnotherAdminSyncing && (
+                    <div className="mb-6 rounded-lg border border-orange-500/30 bg-orange-500/10 p-4 flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm font-medium text-orange-400">Sync is currently running</p>
+                            <p className="mt-1 text-xs text-orange-400/80">
+                                Another admin is currently running a TMDB sync. Please wait until it finishes before starting a new one.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap items-end gap-4">
                     <div>
                         <label className="mb-1.5 block text-xs font-medium text-white/50 uppercase tracking-wider">
@@ -283,8 +326,8 @@ export default function AdminSyncPage() {
                     )}
                     <button
                         onClick={handleTrigger}
-                        disabled={isSyncing || !isMaxPagesValid}
-                        className="flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-60"
+                        disabled={isSyncing || !isMaxPagesValid || isAnotherAdminSyncing}
+                        className="flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {isSyncing ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
