@@ -90,3 +90,11 @@ npm run preview
 - `src/lib/`: Utility functions, including the configured Axios API client.
 - `src/types/`: TypeScript interface and type definitions.
 - `src/App.tsx`: Main application routing and configuration.
+
+
+## Admin Account
+```bash
+Email: atmint@mail.com
+Password: atmint123
+```
+
