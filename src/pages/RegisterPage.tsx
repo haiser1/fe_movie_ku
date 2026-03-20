@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { Film, Mail, Lock, Loader2, User, Disc, AlertTriangle } from "lucide-react";
+import { Film, Mail, Lock, Loader2, User, Disc, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
     const { registerWithEmail } = useAuthStore();
@@ -14,6 +14,8 @@ export default function RegisterPage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Validations
     const isEmailValid = email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -129,16 +131,24 @@ export default function RegisterPage() {
                             </div>
                             <input
                                 id="password"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className={`block w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition-colors ${isPasswordValid
+                                className={`block w-full rounded-xl border py-2.5 pl-10 pr-10 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition-colors ${isPasswordValid
                                         ? "border-white/10 bg-white/5 focus:border-amber-500 focus:ring-amber-500"
                                         : "border-amber-500/50 bg-amber-500/5 focus:border-amber-500 focus:ring-amber-500"
                                     }`}
                                 placeholder="••••••••"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 hover:text-neutral-300 transition-colors"
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
 
@@ -158,16 +168,24 @@ export default function RegisterPage() {
                             </div>
                             <input
                                 id="confirm_password"
-                                type="password"
+                                type={showConfirmPassword ? "text" : "password"}
                                 required
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className={`block w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition-colors ${passwordsMatch
+                                className={`block w-full rounded-xl border py-2.5 pl-10 pr-10 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition-colors ${passwordsMatch
                                         ? "border-white/10 bg-white/5 focus:border-amber-500 focus:ring-amber-500"
                                         : "border-red-500/50 bg-red-500/5 focus:border-red-500 focus:ring-red-500"
                                     }`}
                                 placeholder="••••••••"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 hover:text-neutral-300 transition-colors"
+                                tabIndex={-1}
+                            >
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
 

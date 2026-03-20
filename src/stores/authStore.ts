@@ -11,7 +11,7 @@ interface AuthState {
 
     fetchUser: () => Promise<void>;
     handleOAuthCallback: (params: URLSearchParams) => Promise<UserProfile | null>;
-    loginWithEmail: (data: LoginUserPasswordRequest) => Promise<{ success: boolean; message: string }>;
+    loginWithEmail: (data: LoginUserPasswordRequest) => Promise<{ success: boolean; message: string; user?: UserProfile | null }>;
     registerWithEmail: (data: RegisterUserRequest) => Promise<{ success: boolean; message: string }>;
     logout: () => Promise<void>;
     reset: () => void;
@@ -93,7 +93,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             await get().fetchUser();
-            return { success: true, message: "Logged in successfully" };
+            const user = get().user;
+            return { success: true, message: "Logged in successfully", user };
         } catch (error: any) {
             const msg = parseApiError(error, "Login failed");
             set({ isLoading: false });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { Film, Mail, Lock, Loader2, Disc, AlertTriangle } from "lucide-react";
+import { Film, Mail, Lock, Loader2, Disc, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const { loginWithEmail } = useAuthStore();
@@ -11,6 +11,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     // Validations
     const isEmailValid = email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -27,7 +28,11 @@ export default function LoginPage() {
         setIsLoading(false);
 
         if (result.success) {
-            navigate("/");
+            if (result.user?.role === "admin") {
+                navigate("/admin/dashboard", { replace: true });
+            } else {
+                navigate("/", { replace: true });
+            }
         } else {
             setErrorMsg(result.message);
         }
@@ -101,13 +106,21 @@ export default function LoginPage() {
                             </div>
                             <input
                                 id="password"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white placeholder-neutral-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
+                                className="block w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-10 text-sm text-white placeholder-neutral-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
                                 placeholder="••••••••"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 hover:text-neutral-300 transition-colors"
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
 
