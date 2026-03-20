@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
 import { useMovieStore } from "@/stores/movieStore";
@@ -33,6 +33,27 @@ export default function MoviesPage() {
         }),
         [searchParams]
     );
+
+    // Local search state for debouncing
+    const [searchTerm, setSearchTerm] = useState(filters.search || "");
+
+    // Sync local state when URL param changes externally (e.g. "Clear filters")
+    useEffect(() => {
+        setSearchTerm(filters.search || "");
+    }, [filters.search]);
+
+    // Debounce: update URL 500ms after user stops typing
+    useEffect(() => {
+        const currentSearch = searchParams.get("search") || "";
+        if (searchTerm === currentSearch) return;
+
+        const timer = setTimeout(() => {
+            updateParam("search", searchTerm || null);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchTerm]);
 
     useEffect(() => {
         fetchGenres();
@@ -84,17 +105,12 @@ export default function MoviesPage() {
             <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
                 <SlidersHorizontal className="h-4 w-4 text-white/40" />
 
-                {/* Search */}
+                {/* Search (debounced) */}
                 <input
                     type="text"
                     placeholder="Search..."
-                    defaultValue={filters.search || ""}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            const val = (e.target as HTMLInputElement).value;
-                            updateParam("search", val || null);
-                        }
-                    }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-9 w-44 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-white/40 outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/25"
                 />
 
