@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "@/stores/authStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -48,34 +49,12 @@ export function parseApiError(err: any, fallback: string = "An error occurred"):
 
 // Request interceptor — attach token if available (from memory)
 api.interceptors.request.use((config) => {
-    const token = getAccessToken();
+    const token = useAuthStore.getState().accessToken;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
-
-// Token storage (in-memory, not localStorage for security)
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
-
-export function setTokens(access: string, refresh: string) {
-    accessToken = access;
-    refreshToken = refresh;
-}
-
-export function getAccessToken(): string | null {
-    return accessToken;
-}
-
-export function getRefreshToken(): string | null {
-    return refreshToken;
-}
-
-export function clearTokens() {
-    accessToken = null;
-    refreshToken = null;
-}
 
 // Response interceptor — handle 401 with token refresh
 let isRefreshing = false;
@@ -99,6 +78,7 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const refreshToken = localStorage.getItem("refresh_token");
 
         // If 401 and we haven't retried yet, try to refresh
         if (
@@ -131,7 +111,9 @@ api.interceptors.response.use(
 
                 const newAccessToken = data.data.access_token;
                 const newRefreshToken = data.data.refresh_token;
-                setTokens(newAccessToken, newRefreshToken);
+                
+                localStorage.setItem("refresh_token", newRefreshToken);
+                useAuthStore.getState().setAccessToken(newAccessToken);
 
                 processQueue(null, newAccessToken);
 
@@ -139,8 +121,7 @@ api.interceptors.response.use(
                 return api(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                clearTokens();
-                // Dispatch a custom event so authStore can react
+                localStorage.removeItem("refresh_token");
                 window.dispatchEvent(new Event("auth:logout"));
                 return Promise.reject(refreshError);
             } finally {

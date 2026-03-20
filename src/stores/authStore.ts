@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import api from "@/lib/api";
-import { setTokens, clearTokens, parseApiError } from "@/lib/api";
+import { parseApiError } from "@/lib/api";
 import type { UserProfile, ApiResponse, RegisterUserRequest, LoginUserPasswordRequest } from "@/types";
 
 interface AuthState {
     user: UserProfile | null;
+    accessToken: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
 
@@ -14,12 +15,18 @@ interface AuthState {
     registerWithEmail: (data: RegisterUserRequest) => Promise<{ success: boolean; message: string }>;
     logout: () => Promise<void>;
     reset: () => void;
+    setAccessToken: (token: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
+    accessToken: null,
     isAuthenticated: false,
     isLoading: false,
+
+    setAccessToken: (token: string | null) => {
+        set({ accessToken: token });
+    },
 
     fetchUser: async () => {
         set({ isLoading: true });
@@ -34,9 +41,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             set({
                 user: null,
+                accessToken: null,
                 isAuthenticated: false,
             });
-            clearTokens();
+            localStorage.removeItem("refresh_token");
         } finally {
             set({ isLoading: false });
         }
@@ -45,12 +53,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     handleOAuthCallback: async (params: URLSearchParams) => {
         set({ isLoading: true });
         try {
-            // Tokens might come from URL params (BE redirect with query params)
-            const accessToken = params.get("access_token");
+            const accessTokenVal = params.get("access_token");
             const refreshTokenVal = params.get("refresh_token");
 
-            if (accessToken && refreshTokenVal) {
-                setTokens(accessToken, refreshTokenVal);
+            if (accessTokenVal && refreshTokenVal) {
+                localStorage.setItem("refresh_token", refreshTokenVal);
+                set({ accessToken: accessTokenVal });
             }
 
             // Now fetch user profile
@@ -63,8 +71,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
             return data.data;
         } catch {
-            set({ user: null, isAuthenticated: false });
-            clearTokens();
+            set({ user: null, accessToken: null, isAuthenticated: false });
+            localStorage.removeItem("refresh_token");
             return null;
         } finally {
             set({ isLoading: false });
@@ -74,7 +82,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     loginWithEmail: async (data: LoginUserPasswordRequest) => {
         set({ isLoading: true });
         try {
-            await api.post("/api/auth/email-password/login", data);
+            const response = await api.post("/api/auth/email-password/login", data);
+
+            const accessTokenVal = response.data.data?.access_token;
+            const refreshTokenVal = response.data.data?.refresh_token;
+
+            if (accessTokenVal && refreshTokenVal) {
+                localStorage.setItem("refresh_token", refreshTokenVal);
+                set({ accessToken: accessTokenVal });
+            }
+
             await get().fetchUser();
             return { success: true, message: "Logged in successfully" };
         } catch (error: any) {
@@ -99,18 +116,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
         try {
+            // Include refresh token if needed for backend invalidation, though API handles it if token is passed
             await api.post("/api/auth/logout");
         } catch {
             // Ignore logout API errors
         } finally {
-            clearTokens();
-            set({ user: null, isAuthenticated: false });
+            localStorage.removeItem("refresh_token");
+            set({ user: null, accessToken: null, isAuthenticated: false });
         }
     },
 
     reset: () => {
-        clearTokens();
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        localStorage.removeItem("refresh_token");
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
     },
 }));
 
